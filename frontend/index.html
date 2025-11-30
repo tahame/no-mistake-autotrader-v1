@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>No-Mistake Autotrader v1 – Portal</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <h1>No-Mistake Autotrader v1 – Core Portal</h1>
+
+    <section id="auth-section">
+      <h2>1. Auth</h2>
+      <div class="panel">
+        <h3>Register</h3>
+        <input id="reg-email" type="email" placeholder="Email">
+        <input id="reg-pass" type="password" placeholder="Password">
+        <button onclick="register()">Register</button>
+        <div id="reg-result" class="result"></div>
+      </div>
+      <div class="panel">
+        <h3>Login</h3>
+        <input id="login-email" type="email" placeholder="Email">
+        <input id="login-pass" type="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <div id="login-result" class="result"></div>
+      </div>
+    </section>
+
+    <section id="strategies-section">
+      <h2>2. Strategies</h2>
+      <div class="panel">
+        <h3>Create Strategy</h3>
+        <input id="strat-name" type="text" placeholder="Strategy name">
+        <textarea id="strat-desc" placeholder="Description (optional)"></textarea>
+        <textarea id="strat-spec" placeholder='Spec JSON, e.g. {"symbol": "AVAXUSDT", "risk_per_trade": 1.0}'></textarea>
+        <button onclick="createStrategy()">Create Strategy</button>
+        <div id="strat-create-result" class="result"></div>
+      </div>
+      <div class="panel">
+        <h3>Your Strategies</h3>
+        <button onclick="loadStrategies()">Load Strategies</button>
+        <pre id="strat-list"></pre>
+      </div>
+    </section>
+
+    <section id="market-section">
+      <h2>3. Market Data</h2>
+      <div class="panel">
+        <h3>Get Ticker</h3>
+        <input id="market-symbol" type="text" placeholder="Symbol, e.g. AVAXUSDT">
+        <input id="market-exchange" type="text" placeholder="Exchange, default binance">
+        <button onclick="getTicker()">Fetch Ticker</button>
+        <pre id="market-result"></pre>
+      </div>
+    </section>
+
+    <section id="prediction-section">
+      <h2>4. Prediction</h2>
+      <div class="panel">
+        <h3>Get Prediction Snapshot</h3>
+        <input id="pred-symbol" type="text" placeholder="Symbol, e.g. AVAXUSDT">
+        <input id="pred-exchange" type="text" placeholder="Exchange, default binance">
+        <button onclick="getPrediction()">Fetch Prediction</button>
+        <pre id="pred-result"></pre>
+      </div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
