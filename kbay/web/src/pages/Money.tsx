@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { type ReactNode, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { get, patch, post, qs } from '../api';
 import {
@@ -1005,5 +1005,3 @@ function PayWages({ emp, onClose }: { emp: Employee; onClose: () => void }) {
   );
 }
 
-// Keep ReactNode import used for helper prop types above.
-export type { ReactNode };
