@@ -28,7 +28,7 @@ export async function identityRoutes(base: FastifyInstance) {
   app.get('/auth/me', { schema: { tags: ['auth'] } }, async (req) => {
     if (!req.auth) throw unauthorized();
     const a = req.auth;
-    return { user: a.actor, tenantId: a.tenantId, mustChangePassword: a.mustChangePassword, totpRequired: a.totpRequired };
+    return { user: a.actor, tenantId: a.tenantId, mustChangePassword: a.mustChangePassword, totpEnabled: a.totpEnabled, totpRequired: a.totpRequired };
   });
 
   app.post('/auth/password', {

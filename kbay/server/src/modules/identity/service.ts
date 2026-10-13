@@ -33,6 +33,7 @@ export interface AuthInfo {
   tenantId: string | null;
   actor: Actor;
   mustChangePassword: boolean;
+  totpEnabled: boolean;
   totpRequired: boolean;
   access: Access;
 }
@@ -41,8 +42,8 @@ export async function login(username: string, password: string, meta: { ip?: str
   return withSystem(async (tx) => {
     const [u] = await tx<{ id: string; tenant_id: string | null; password_hash: string; active: boolean;
       must_change_password: boolean; totp_enabled: boolean }[]>`
-      select id, tenant_id, password_hash, active, must_change_password, totp_enabled
-      from core.users where lower(username) = lower(${username.trim()})`;
+      select u.id, u.tenant_id, u.password_hash, u.active and coalesce(t.active, true) as active, u.must_change_password, u.totp_enabled
+      from core.users u left join core.tenants t on t.id = u.tenant_id where lower(u.username) = lower(${username.trim()})`;
     // Verify even when the user is missing so timing does not reveal valid usernames.
     const ok = await verifyPassword(u?.password_hash ?? '$argon2id$v=19$m=19456,t=2,p=1$c29tZXNhbHQ$Zm9v', password);
     if (!u || !ok || !u.active) {
@@ -85,7 +86,8 @@ export async function authenticate(token: string): Promise<AuthInfo | null> {
       select s.id, s.user_id, s.tenant_id, s.totp_passed, u.username, u.person_id, u.is_platform_owner,
              u.must_change_password, u.totp_enabled, p.display_name, p.full_name, s.last_seen_at
       from core.sessions s join core.users u on u.id = s.user_id left join core.people p on p.id = u.person_id
-      where s.token_hash = ${sha256(token)} and s.revoked_at is null and s.expires_at > now() and u.active`;
+      where s.token_hash = ${sha256(token)} and s.revoked_at is null and s.expires_at > now() and u.active
+        and (u.tenant_id is null or exists (select 1 from core.tenants t where t.id = u.tenant_id and t.active))`;
     if (!s) return null;
     if (Date.now() - s.last_seen_at.getTime() > 60_000) {
       await tx`update core.sessions set last_seen_at = now() where id = ${s.id}`;
@@ -95,6 +97,7 @@ export async function authenticate(token: string): Promise<AuthInfo | null> {
       sessionId: s.id,
       tenantId: s.tenant_id,
       mustChangePassword: s.must_change_password,
+      totpEnabled: s.totp_enabled,
       totpRequired: s.totp_enabled && !s.totp_passed,
       access,
       actor: {
@@ -124,6 +127,8 @@ export async function changePassword(userId: string, current: string, next: stri
 // ---- Two-factor (TOTP). Optional today; can be made mandatory for the owner later. ----
 
 export async function totpBegin(userId: string, username: string) {
+  const [u] = await withSystem((tx) => tx<{ totp_enabled: boolean }[]>`select totp_enabled from core.users where id = ${userId}`);
+  if (u?.totp_enabled) throw conflict('totp_enabled', 'Two-factor is already on for this account.');
   const secret = generateSecret();
   await withSystem((tx) => tx`update core.users set totp_secret = ${secret} where id = ${userId} and not totp_enabled`);
   return { secret, uri: generateURI({ issuer: 'Opplox', label: username, secret }) };

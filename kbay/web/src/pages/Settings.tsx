@@ -50,14 +50,7 @@ function TwoFactor() {
   const qc = useQueryClient();
   const toast = useToast();
   const userId = s.me!.user.userId;
-  // /auth/me does not say whether 2FA is on; administrators can see it from the user list.
-  const canSee = s.can('users.manage') && !!s.org;
-  const users = useQuery({
-    queryKey: ['admin-users', s.org?.id],
-    queryFn: () => get<{ id: string; totp_enabled: boolean }[]>(`/orgs/${s.org!.id}/users`),
-    enabled: canSee,
-  });
-  const knownOn = users.data?.find((u) => u.id === userId)?.totp_enabled;
+  const knownOn = s.me!.totpEnabled;
   const [setup, setSetup] = useState<{ secret: string; uri: string } | null>(null);
   const [code, setCode] = useState('');
   const [done, setDone] = useState(false);
@@ -109,7 +102,7 @@ function TwoFactor() {
             <li>
               Type the 6-digit code the app shows:
               <div className="mt-2 flex flex-wrap gap-2">
-                <Input className="w-40 text-center font-mono text-lg tracking-widest" inputMode="numeric" autoComplete="one-time-code" maxLength={8}
+                <Input className="w-40! text-center font-mono text-lg tracking-widest" inputMode="numeric" autoComplete="one-time-code" maxLength={8}
                   value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456" aria-label="6-digit code" />
                 <Button variant="primary" type="submit" busy={enable.isPending} disabled={!/^\d{6,8}$/.test(code.replace(/\s/g, ''))}>Turn on</Button>
               </div>

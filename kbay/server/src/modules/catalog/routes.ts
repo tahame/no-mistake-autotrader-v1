@@ -16,7 +16,7 @@ export async function catalogRoutes(base: FastifyInstance) {
       if (req.query.all) { if (!ctx.access.can('inventory.manage', orgId)) requirePerm(ctx, 'menu.manage', orgId); }
       else if (!ctx.access.can('pos.sell', orgId, req.query.locationId) && !ctx.access.can('reports.view', orgId)) throw forbidden();
       return svc.menu(ctx.tx, orgId, { locationId: req.query.locationId, includeDisabled: req.query.all });
-    }, { module: 'pos' }));
+    }));
 
   app.post('/orgs/:orgId/menu/categories', {
     schema: { tags: ['menu'], params: orgParams, body: z.object({ id: id.optional(), name: z.string().min(1).max(60), kind: z.enum(['food', 'beverage']), sort: z.number().int().optional() }) },

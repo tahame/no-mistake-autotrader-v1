@@ -114,8 +114,10 @@ export function Reports() {
               </button>
             ))}
           </div>
-          <Select aria-label="Location" value={locationId} onChange={(e) => setLocationId(e.target.value)} className="h-11 w-auto min-w-44"
-            options={[{ value: '', label: 'All locations' }, ...org.locations.map((l) => ({ value: l.id, label: l.name }))]} />
+          <div className="w-full sm:w-60">
+            <Select aria-label="Location" value={locationId} onChange={(e) => setLocationId(e.target.value)}
+              options={[{ value: '', label: 'All locations' }, ...org.locations.map((l) => ({ value: l.id, label: l.name }))]} />
+          </div>
         </div>
         {preset === 'custom' && (
           <div className="flex flex-wrap items-end gap-3">

@@ -9,7 +9,7 @@ export interface Org {
 }
 export interface Me {
   user: { userId: string; personId: string | null; username: string; displayName: string; isPlatformOwner: boolean };
-  tenantId: string | null; mustChangePassword: boolean; totpRequired: boolean;
+  tenantId: string | null; mustChangePassword: boolean; totpEnabled?: boolean; totpRequired: boolean;
 }
 
 interface Session {

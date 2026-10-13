@@ -484,7 +484,7 @@ function RolesTab() {
         )}
       </Card>
 
-      <Card title="Who can do what" actions={<Input className="h-9 w-48" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />}>
+      <Card title="Who can do what" actions={<Input className="h-9! w-48!" placeholder="Search…" value={search} onChange={(e) => setSearch(e.target.value)} />}>
         {list.length === 0 ? <Empty>No logins yet. Create one under People &amp; logins.</Empty> : (
           <div className="space-y-3">
             {list.map((u) => (
@@ -901,7 +901,7 @@ function ItemsView({ cats }: { cats: MCategory[] }) {
       </Note>
       <div className="flex flex-wrap items-center gap-2">
         <Input className="min-w-0 flex-1 sm:max-w-xs" placeholder="Search items…" value={search} onChange={(e) => setSearch(e.target.value)} />
-        <Select className="w-auto" value={show} onChange={(e) => setShow(e.target.value as typeof show)}
+        <Select className="w-auto!" value={show} onChange={(e) => setShow(e.target.value as typeof show)}
           options={[{ value: 'all', label: 'All items' }, { value: 'on', label: 'Switched on' }, { value: 'off', label: 'Switched off' }]} />
         <span className="text-sm text-[var(--muted)]">{onCount} of {allItems.length} on</span>
         <div className="ml-auto flex gap-2">
@@ -942,7 +942,7 @@ function ItemsView({ cats }: { cats: MCategory[] }) {
                         {location && (
                           <label className="flex items-center gap-2 text-sm">
                             <span className="hidden text-[var(--muted)] lg:inline">{location.name}:</span>
-                            <Select aria-label={`${i.name} at ${location.name}`} className="w-auto" disabled={busy === `${i.id}-loc`}
+                            <Select aria-label={`${i.name} at ${location.name}`} className="w-auto!" disabled={busy === `${i.id}-loc`}
                               value={i.location_enabled === null ? 'follow' : i.location_enabled ? 'on' : 'off'}
                               onChange={(e) => {
                                 const v = e.target.value;
@@ -1261,7 +1261,7 @@ function GroupModal({ info, cats, onClose }: { info: GroupInfo | null; cats: MCa
         <div className="space-y-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="text-sm font-medium">Offered on these items ({itemIds.length})</div>
-            <Input className="h-9 w-48" placeholder="Find item…" value={filter} onChange={(e) => setFilter(e.target.value)} />
+            <Input className="h-9! w-48!" placeholder="Find item…" value={filter} onChange={(e) => setFilter(e.target.value)} />
           </div>
           <div className="max-h-72 overflow-y-auto rounded-xl border border-[var(--line)] p-3">
             {cats.map((c) => {
