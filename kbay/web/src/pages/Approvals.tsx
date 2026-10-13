@@ -11,6 +11,7 @@ interface Approval {
   id: string; kind: string; subject_type: string; subject_id: string; summary: string; amount_minor: number | null; status: Status;
   location_id: string | null; location_name: string | null; requested_by: string; requested_by_name: string; requested_at: string;
   decided_at: string | null; decision_note: string | null; decided_by_name: string | null; comment_count: number; canDecide: boolean;
+  detail?: SubjectDetail | null;
 }
 interface Comment {
   id: string; parent_id: string | null; body: string; is_question: boolean; asked_user_id: string | null; answered_at: string | null;
@@ -35,11 +36,9 @@ export function Approvals() {
   const [filter, setFilter] = useState<Filter>('pending');
   const list = useQuery({ queryKey: ['approvals', orgId, filter], queryFn: () => get<Approval[]>(`/orgs/${orgId}/approvals${qs({ status: filter })}`),
     refetchInterval: 30_000 });
-  // The detail may not be in the filtered list (e.g. opened from a notification after it was decided).
-  const inList = list.data?.find((a) => a.id === id);
-  const all = useQuery({ queryKey: ['approvals', orgId, 'all'], queryFn: () => get<Approval[]>(`/orgs/${orgId}/approvals?status=all`),
-    enabled: !!id && !!list.data && !inList });
-  const detail = inList ?? all.data?.find((a) => a.id === id);
+  // Full request with what is behind it (expense, purchase lines, close figures...).
+  const one = useQuery({ queryKey: ['approval', orgId, id], queryFn: () => get<Approval>(`/orgs/${orgId}/approvals/${id}`), enabled: !!id });
+  const detail = one.data ?? list.data?.find((a) => a.id === id);
   const [rejecting, setRejecting] = useState<Approval | null>(null);
   const rows = list.data ?? [];
   const toDecide = rows.filter((r) => r.canDecide && r.status === 'pending').length;
@@ -61,7 +60,7 @@ export function Approvals() {
       {id && (
         <Modal open onClose={() => nav('/approvals')} title={detail ? KIND[detail.kind] ?? 'Request' : 'Request'} wide>
           {detail ? <Detail a={detail} onReject={() => setRejecting(detail)} onDone={() => nav('/approvals')} />
-            : all.isLoading || list.isLoading ? <Loading /> : <Empty>This request was not found. It may be older than the last 200 requests.</Empty>}
+            : one.isLoading ? <Loading /> : <Empty>This request was not found.</Empty>}
         </Modal>
       )}
       {rejecting && <RejectSheet a={rejecting} onClose={() => setRejecting(null)} />}
@@ -168,6 +167,7 @@ function Detail({ a, onReject, onDone }: { a: Approval; onReject: () => void; on
           <dd>{timeLabel(a.decided_at)}{a.decided_by_name ? ` by ${a.decided_by_name}` : ''}</dd></>}
         {a.decision_note && <><dt className="text-[var(--muted)]">Note</dt><dd>{a.decision_note}</dd></>}
       </dl>
+      {a.detail ? <Subject d={a.detail} /> : null}
       {pending && a.canDecide && (
         <div className="space-y-2">
           <Field label="Note (optional for approve, required to reject)">
@@ -281,4 +281,80 @@ function CommentBody({ c }: { c: Comment }) {
       <p className="mt-1 whitespace-pre-wrap text-sm">{c.body}</p>
     </div>
   );
+}
+
+// ---- What is behind the request ----
+type SubjectDetail = Record<string, unknown> & { type: string };
+const n = (v: unknown) => Number(v ?? 0);
+
+function Rows({ rows }: { rows: [string, React.ReactNode][] }) {
+  return (
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+      {rows.filter(([, v]) => v !== null && v !== undefined && v !== '').map(([k, v]) => (
+        <div key={k} className="contents"><dt className="text-[var(--muted)]">{k}</dt><dd>{v}</dd></div>
+      ))}
+    </dl>
+  );
+}
+
+function Subject({ d }: { d: SubjectDetail }) {
+  const box = 'rounded-xl border border-[var(--line)] p-3';
+  if (d.type === 'expense') {
+    return <div className={box}><Rows rows={[
+      ['Category', String(d.category)], ['For', String(d.description)], ['Payee', d.payee as string],
+      ['Paid', d.payment === 'credit' ? `On credit to ${d.supplier_name}` : `From ${d.account_name}`],
+      ['Approval limit here', d.approval_limit_minor != null ? <Money minor={n(d.approval_limit_minor)} /> : null],
+    ]} /></div>;
+  }
+  if (d.type === 'purchase') {
+    const lines = (d.lines as { name: string; qty: string; unit: string; totalMinor: number }[] | null) ?? [];
+    return (
+      <div className={cx(box, 'space-y-3')}>
+        <Rows rows={[['Supplier', String(d.supplier_name)], ['Paid', d.payment === 'credit' ? 'On credit (udhaar)' : `From ${d.account_name}`],
+          ['Already owed to supplier', <Money minor={n(d.supplier_owed_minor)} />], ['Note', d.note as string]]} />
+        <table className="w-full text-sm"><tbody>
+          {lines.map((l, i) => (
+            <tr key={i} className="border-t border-[var(--line)]"><td className="py-1.5">{l.name}</td><td className="text-right tabular">{Number(l.qty)} {l.unit}</td>
+              <td className="text-right"><Money minor={l.totalMinor} /></td></tr>
+          ))}
+        </tbody></table>
+      </div>
+    );
+  }
+  if (d.type === 'day_close') {
+    const f = d.figures as Record<string, number>;
+    const lines = (d.lines as { name: string; kind: string; expected_minor: number; declared_minor: number; difference_minor: number }[]) ?? [];
+    return (
+      <div className={cx(box, 'space-y-3')}>
+        <Rows rows={[['Sales', <Money minor={f.sales} />], ['Refunds', <Money minor={f.refunds} />], ['Cost of food used', <Money minor={f.cogs} />],
+          ['All costs', <Money minor={f.expenses} />], ['Profit (estimate)', <Money minor={f.profit} />], ['Opening float', <Money minor={n(d.opening_float_minor)} />],
+          ['Note from the stall', d.closing_note as string]]} />
+        <table className="w-full text-sm">
+          <thead><tr className="text-left text-xs text-[var(--muted)]"><th className="py-1">Account</th><th className="text-right">Books</th><th className="text-right">Counted</th><th className="text-right">Difference</th></tr></thead>
+          <tbody>{lines.map((l) => (
+            <tr key={l.name} className="border-t border-[var(--line)]"><td className="py-1.5">{l.name}</td><td className="text-right"><Money minor={l.expected_minor} /></td>
+              <td className="text-right"><Money minor={l.declared_minor} /></td>
+              <td className="text-right">{l.difference_minor === 0 ? <Badge tone="good">OK</Badge> : <Money minor={l.difference_minor} sign />}</td></tr>
+          ))}</tbody>
+        </table>
+      </div>
+    );
+  }
+  if (d.type === 'capital') {
+    return <div className={box}><Rows rows={[['Person', String(d.person_name)], ['Account', d.account_name as string], ['Reason', d.reason as string],
+      ['Loan amount', d.loan_principal_minor != null ? <Money minor={n(d.loan_principal_minor)} /> : null], ['Loan due', d.loan_due_date as string]]} /></div>;
+  }
+  if (d.type === 'shares') {
+    const cur = (d.current as { name: string; weight: string }[]) ?? [];
+    const tot = cur.reduce((a, c) => a + Number(c.weight), 0);
+    return (
+      <div className={cx(box, 'grid gap-3 sm:grid-cols-2 text-sm')}>
+        <div><div className="mb-1 font-medium">Now</div>{cur.map((c) => <div key={c.name}>{c.name}: {tot ? ((Number(c.weight) / tot) * 100).toFixed(2) : 0}%</div>)}</div>
+        <div><div className="mb-1 font-medium">Proposed from {String(d.effective_from)}</div>
+          {((d.proposed as { name: string; percent: number }[]) ?? []).map((p) => <div key={p.name}>{p.name}: {p.percent}%</div>)}</div>
+        {d.reason ? <p className="sm:col-span-2 text-[var(--muted)]">Reason: {String(d.reason)}</p> : null}
+      </div>
+    );
+  }
+  return null;
 }

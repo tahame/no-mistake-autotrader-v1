@@ -1248,7 +1248,7 @@ function GroupModal({ info, cats, onClose }: { info: GroupInfo | null; cats: MCa
           {mods.map((m, i) => (
             <div key={m.id ?? `new-${i}`} className="grid grid-cols-[1fr_auto] gap-2 rounded-xl border border-[var(--line)] p-2 sm:grid-cols-[1fr_80px_150px_auto]">
               <Input value={m.name} aria-label="Option name" placeholder="e.g. Extra cheese" onChange={(e) => setMod(i, { name: e.target.value })} />
-              <Select className="sm:order-none" aria-label="Adds or takes off" value={String(m.sign)} onChange={(e) => setMod(i, { sign: Number(e.target.value) })}
+              <Select aria-label="Adds or takes off" value={String(m.sign)} onChange={(e) => setMod(i, { sign: Number(e.target.value) })}
                 options={[{ value: '1', label: '+ add' }, { value: '-1', label: '− off' }]} />
               <MoneyInput value={m.amount} onChange={(v) => setMod(i, { amount: v })} aria-label="Price change" />
               {m.id ? <Check checked={m.enabled} onChange={(v) => setMod(i, { enabled: v })} className="items-center">On</Check>

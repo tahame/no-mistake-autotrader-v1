@@ -33,7 +33,7 @@ const toUnitStr = (base: number | string, unit: string) => String(Math.round((Nu
 interface StockItem {
   id: string; parent_id: string | null; name: string; category: string; kind: Kind; dimension: Dim; purchase_unit: string;
   tracking: 'precise' | 'bulk'; cost_class: 'food' | 'beverage' | 'packaging' | 'fuel'; low_stock_base: string | null; active: boolean;
-  components: { itemId: string; per1000Base: number | string }[];
+  components: { itemId: string; per1000Base: number | string; perMixUnit: number | string }[];
 }
 interface Level {
   id: string; name: string; category: string; parent_id: string | null; dimension: Dim; purchase_unit: string; tracking: string;
@@ -239,7 +239,7 @@ function Requests() {
   const qc = useQueryClient();
   const toast = useToast();
   const [status, setStatus] = useState<'open' | 'done' | 'cancelled' | 'all'>('open');
-  const reqs = useQuery({ queryKey: ['stock-requests', orgId, status], queryFn: () => get<StockRequest[]>(`/orgs/${orgId}/stock-requests${qs({ status })}`),
+  const reqs = useQuery({ queryKey: ['stock-requests', orgId, status, locationId], queryFn: () => get<StockRequest[]>(`/orgs/${orgId}/stock-requests${qs({ status, locationId })}`),
     enabled: can('inventory.view') });
   const items = useItems();
   const [itemId, setItemId] = useState('');
@@ -557,7 +557,7 @@ function ItemsList() {
                         <div className="mt-1 text-sm text-[var(--muted)]">
                           {i.components.length === 0 ? 'No parts set yet.' : `Per ${mixBasis(i.dimension)}: ` + i.components.map((c) => {
                             const ci = byId.get(c.itemId);
-                            return `${ci ? inUnit(c.per1000Base, BASE_UNIT[ci.dimension]) : '?'} ${ci?.name ?? ''}`;
+                            return `${ci ? inUnit(c.perMixUnit, BASE_UNIT[ci.dimension]) : '?'} ${ci?.name ?? ''}`;
                           }).join(', ')}
                         </div>
                       )}
@@ -591,27 +591,34 @@ function ItemsList() {
   );
 }
 
-const mixBasis = (d: Dim) => (d === 'mass' ? '1 kg' : d === 'volume' ? '1 L' : '1,000 units');
+const mixBasis = (d: Dim) => (d === 'mass' ? '1 kg' : d === 'volume' ? '1 L' : '1 unit');
 
 function VarietyPicker({ family, varieties }: { family: StockItem; varieties: StockItem[] }) {
   const { orgId, locationId, location } = useScope();
   const toast = useToast();
   const qc = useQueryClient();
+  const inUse = useQuery({ queryKey: ['varieties', orgId, locationId], queryFn: () =>
+    get<{ family_item_id: string; variety_item_id: string; variety_name: string }[]>(`/orgs/${orgId}/varieties${qs({ locationId })}`), enabled: !!locationId });
+  const current = inUse.data?.find((r) => r.family_item_id === family.id);
   const [v, setV] = useState('');
   const save = useMutation({
     mutationFn: () => post(`/orgs/${orgId}/varieties`, { locationId, familyId: family.id, varietyId: v }),
     onSuccess: () => {
       toast(`${location?.name ?? 'Location'} now uses ${varieties.find((x) => x.id === v)?.name ?? 'that variety'}`);
       setV('');
+      void qc.invalidateQueries({ queryKey: ['varieties'] });
       void qc.invalidateQueries({ queryKey: ['plate-costs'] });
     },
     onError: (e) => toast(e.message, 'bad'),
   });
   return (
-    <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
-      <Select value={v} onChange={(e) => setV(e.target.value)} aria-label={`Variety of ${family.name} in use`}
-        placeholder={`Variety in use at ${location?.name ?? 'this location'}…`} options={varieties.map((k) => ({ value: k.id, label: k.name }))} />
-      <Button disabled={!v} busy={save.isPending} onClick={() => save.mutate()}>Use here</Button>
+    <div className="space-y-2">
+      <p className="text-sm">In use at {location?.name ?? 'this location'}: <b>{current?.variety_name ?? 'not set (the one with most stock is used)'}</b></p>
+      <div className="grid gap-2 sm:grid-cols-[1fr_auto]">
+        <Select value={v} onChange={(e) => setV(e.target.value)} aria-label={`Variety of ${family.name} in use`}
+          placeholder="Switch to…" options={varieties.filter((k) => k.id !== current?.variety_item_id).map((k) => ({ value: k.id, label: k.name }))} />
+        <Button disabled={!v} busy={save.isPending} onClick={() => save.mutate()}>Use here</Button>
+      </div>
     </div>
   );
 }
@@ -745,7 +752,7 @@ function MixEditor({ mix, all, onClose }: { mix: StockItem; all: StockItem[]; on
   const [lines, setLines] = useState<EditLine[]>(() => mix.components.map((c) => {
     const ci = byId.get(c.itemId);
     const unit = ci ? BASE_UNIT[ci.dimension] : 'g';
-    return { key: crypto.randomUUID(), itemId: c.itemId, qty: toUnitStr(c.per1000Base, unit), unit };
+    return { key: crypto.randomUUID(), itemId: c.itemId, qty: toUnitStr(c.perMixUnit, unit), unit };
   }));
   const save = useMutation({
     mutationFn: () => put(`/orgs/${orgId}/stock-items/${mix.id}/mix`, { components: lines.map((l) => ({ itemId: l.itemId, qty: l.qty.trim(), unit: l.unit })) }),
