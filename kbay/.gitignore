@@ -8,3 +8,4 @@ deploy/.seeded
 deploy/seed-output.txt
 deploy/backups/*
 !deploy/backups/.gitkeep
+*.tsbuildinfo
