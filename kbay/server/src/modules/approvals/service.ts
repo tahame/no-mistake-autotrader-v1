@@ -11,6 +11,8 @@ import { notify, orgSetting } from '../notifications/index.js';
 export interface ApprovalHandler {
   onApproved(ctx: Ctx, subjectId: string, approvalId: string): Promise<void>;
   onRejected(ctx: Ctx, subjectId: string, approvalId: string): Promise<void>;
+  /** What is behind the request (the expense, the purchase lines, the day's figures...), for the approver. */
+  detail?(ctx: Ctx, subjectId: string): Promise<unknown>;
 }
 const handlers = new Map<string, ApprovalHandler>();
 export function registerApprovalHandler(subjectType: string, h: ApprovalHandler) {
@@ -110,9 +112,20 @@ export async function list(ctx: Ctx, orgId: string, status: string) {
 }
 
 export async function get(ctx: Ctx, approvalId: string) {
-  const [a] = await ctx.tx`select * from core.approval_requests where id = ${approvalId}`;
+  const [a] = await ctx.tx<{ id: string; org_id: string; kind: ApprovalKind; location_id: string | null; requested_by: string;
+    subject_type: string; subject_id: string; status: string }[]>`
+    select a.*, l.name as location_name,
+           coalesce(rp.display_name, rp.full_name, ru.username) as requested_by_name,
+           coalesce(dp.display_name, dp.full_name, du.username) as decided_by_name
+    from core.approval_requests a
+    left join core.locations l on l.id = a.location_id
+    join core.users ru on ru.id = a.requested_by left join core.people rp on rp.id = ru.person_id
+    left join core.users du on du.id = a.decided_by left join core.people dp on dp.id = du.person_id
+    where a.id = ${approvalId}`;
   if (!a) throw notFound('Approval');
-  return a;
+  const canDecide = a.status === 'pending' && a.requested_by !== ctx.actor.userId && ctx.access.can(APPROVAL_KINDS[a.kind], a.org_id, a.location_id);
+  const detail = (await handlers.get(a.subject_type)?.detail?.(ctx, a.subject_id)) ?? null;
+  return { ...a, canDecide, detail };
 }
 
 /** Worker: persistent follow-ups until actioned — a missed approval holds up the business. */

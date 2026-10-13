@@ -64,7 +64,7 @@ export async function payWages(ctx: Ctx, orgId: string, input: { employeeId: str
   const payable = await accountId(ctx.tx, orgId, 'wages_payable');
   const [owed] = await ctx.tx<{ v: number }[]>`select coalesce(sum(credit_minor - debit_minor), 0)::bigint as v from finance.journal_lines
     where ledger_account_id = ${payable} and person_id = ${e.person_id}`;
-  if (input.commissionMinor > owed!.v) throw conflict('commission_exceeds', `Only Rs ${owed!.v / 100} commission is owed.`);
+  if (input.commissionMinor > owed!.v) throw conflict('commission_exceeds', `Only Rs ${(owed!.v / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 })} commission is owed.`);
   const total = base + input.commissionMinor;
   if (total <= 0) throw badRequest('nothing_to_pay', 'Nothing to pay.');
   const acct = await moneyAccount(ctx.tx, orgId, input.moneyAccountId);

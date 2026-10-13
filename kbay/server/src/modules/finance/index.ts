@@ -7,6 +7,7 @@ import { setupLocationAccounts } from './accounts.js';
 import { onCapitalApproved, onCapitalRejected } from './capital.js';
 import { approveClose, rejectClose } from './days.js';
 import { applyShareProposal, rejectShareProposal } from './partners.js';
+import * as details from './details.js';
 import { postExpense, postPurchase, rejectExpense, rejectPurchase } from './spend.js';
 
 export {
@@ -30,9 +31,9 @@ export function registerFinance() {
   registered = true;
   onOrgCreated(createDefaultChart);
   onLocationCreated((tx, tenantId, orgId, locationId, name) => setupLocationAccounts(tx, tenantId, orgId, locationId, name));
-  registerApprovalHandler('expense', { onApproved: (ctx, id) => postExpense(ctx, id), onRejected: (ctx, id) => rejectExpense(ctx, id) });
-  registerApprovalHandler('purchase', { onApproved: (ctx, id) => postPurchase(ctx, id), onRejected: (ctx, id) => rejectPurchase(ctx, id) });
-  registerApprovalHandler('business_day', { onApproved: (ctx, id) => approveClose(ctx, id), onRejected: (ctx, id) => rejectClose(ctx, id) });
-  registerApprovalHandler('capital_txn', { onApproved: (ctx, id) => onCapitalApproved(ctx, id), onRejected: (ctx, id) => onCapitalRejected(ctx, id) });
-  registerApprovalHandler('share_proposal', { onApproved: (ctx, id) => applyShareProposal(ctx, id), onRejected: (ctx, id) => rejectShareProposal(ctx, id) });
+  registerApprovalHandler('expense', { onApproved: (ctx, id) => postExpense(ctx, id), onRejected: (ctx, id) => rejectExpense(ctx, id), detail: details.expense });
+  registerApprovalHandler('purchase', { onApproved: (ctx, id) => postPurchase(ctx, id), onRejected: (ctx, id) => rejectPurchase(ctx, id), detail: details.purchase });
+  registerApprovalHandler('business_day', { onApproved: (ctx, id) => approveClose(ctx, id), onRejected: (ctx, id) => rejectClose(ctx, id), detail: details.day });
+  registerApprovalHandler('capital_txn', { onApproved: (ctx, id) => onCapitalApproved(ctx, id), onRejected: (ctx, id) => onCapitalRejected(ctx, id), detail: details.capital });
+  registerApprovalHandler('share_proposal', { onApproved: (ctx, id) => applyShareProposal(ctx, id), onRejected: (ctx, id) => rejectShareProposal(ctx, id), detail: details.shares });
 }

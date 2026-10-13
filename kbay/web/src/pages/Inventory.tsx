@@ -865,7 +865,7 @@ function PlateCosts() {
     const price = r.open_price ? r.recipe_basis_minor ?? 0 : r.price_minor;
     if (r.margin_minor === null || price <= 0) return '—';
     const p = Math.round((r.margin_minor / price) * 100);
-    return <Badge tone={p >= 60 ? 'good' : p >= 40 ? 'warn' : 'bad'}>{p}%</Badge>;
+    return <span className={cx('tabular', p < 0 && 'text-[var(--bad)]')}>{p}%</span>;
   };
   return (
     <Card title={`Plate costs at ${location?.name ?? 'this location'}`}>

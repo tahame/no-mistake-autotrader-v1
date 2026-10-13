@@ -231,7 +231,7 @@ export async function onCapitalRejected(ctx: Ctx, txnId: string) {
 export async function listCapital(ctx: Ctx, orgId: string, personId?: string | null) {
   if (!(personId && ctx.actor.personId === personId)) requirePerm(ctx, 'reports.partners', orgId);
   const txns = await ctx.tx`
-    select t.id, t.kind, t.amount_minor, t.status, t.reason, t.created_at, t.confirmed_at, t.loan_id, t.person_id,
+    select t.id, t.kind, t.amount_minor, t.status, t.reason, t.created_at, t.confirmed_at, t.loan_id, t.person_id, t.approval_id,
       coalesce(p.display_name, p.full_name) as person_name, l.name as location_name, m.name as account_name
     from finance.capital_txns t join core.people p on p.id = t.person_id left join core.locations l on l.id = t.location_id
     left join finance.money_accounts m on m.id = t.money_account_id

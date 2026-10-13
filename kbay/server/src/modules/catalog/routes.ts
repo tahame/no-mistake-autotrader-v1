@@ -13,7 +13,7 @@ export async function catalogRoutes(base: FastifyInstance) {
   app.get('/orgs/:orgId/menu', { schema: { tags: ['menu'], params: orgParams, querystring: z.object({ locationId: id.optional(), all: z.coerce.boolean().optional() }) } },
     (req) => run(req, async (ctx) => {
       const { orgId } = req.params;
-      if (req.query.all) requirePerm(ctx, 'menu.manage', orgId);
+      if (req.query.all) { if (!ctx.access.can('inventory.manage', orgId)) requirePerm(ctx, 'menu.manage', orgId); }
       else if (!ctx.access.can('pos.sell', orgId, req.query.locationId) && !ctx.access.can('reports.view', orgId)) throw forbidden();
       return svc.menu(ctx.tx, orgId, { locationId: req.query.locationId, includeDisabled: req.query.all });
     }, { module: 'pos' }));

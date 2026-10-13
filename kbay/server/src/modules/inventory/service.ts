@@ -105,10 +105,11 @@ export async function receiveStock(tx: Tx, args: { tenantId: string; orgId: stri
 // ---- Stock items, varieties, mixes and recipes ----
 
 export async function listItems(ctx: Ctx, orgId: string) {
-  requirePerm(ctx, 'inventory.view', orgId);
+  if (!['inventory.view', 'inventory.manage', 'purchase.create', 'inventory.waste', 'inventory.count'].some((p) => ctx.access.can(p as never, orgId))) requirePerm(ctx, 'inventory.view', orgId);
   return ctx.tx`
     select i.id, i.parent_id, i.name, i.category, i.kind, i.dimension, i.purchase_unit, i.tracking, i.cost_class, i.low_stock_base, i.active,
-      coalesce((select json_agg(json_build_object('itemId', m.component_item_id, 'per1000Base', m.per_1000_base))
+      coalesce((select json_agg(json_build_object('itemId', m.component_item_id, 'per1000Base', m.per_1000_base,
+          'perMixUnit', case when i.dimension = 'count' then m.per_1000_base / 1000 else m.per_1000_base end))
         from inventory.mix_components m where m.mix_id = i.id), '[]') as components
     from inventory.items i where i.org_id = ${orgId} order by i.category, i.name`;
 }
@@ -153,11 +154,19 @@ export async function setMixComponents(ctx: Ctx, orgId: string, mixId: string, c
   await ctx.tx`delete from inventory.mix_components where mix_id = ${mixId}`;
   for (const c of comps) {
     const it = await itemRow(ctx.tx, orgId, c.itemId);
-    const per1000 = toBaseMilli(c.qty, c.unit, it.dimension); // milli-base per 1 kg/L/unit of mix = per 1000 base units
+    // Entered per 1 kg / 1 L of mix (= 1000 base units), or per 1 unit of a counted mix (scaled to 1000 units).
+    const per1000 = toBaseMilli(c.qty, c.unit, it.dimension) * (mix.dimension === 'count' ? 1000 : 1);
     await ctx.tx`insert into inventory.mix_components (tenant_id, mix_id, component_item_id, per_1000_base)
       values (${ctx.tenantId}, ${mixId}, ${c.itemId}, ${milliStr(per1000)})`;
   }
   await audit(ctx.tx, { tenantId: ctx.tenantId, orgId, actorUserId: ctx.actor.userId, action: 'mix.updated', entityType: 'stock_item', entityId: mixId, after: comps });
+}
+
+export async function listVarieties(ctx: Ctx, orgId: string, locationId: string) {
+  requirePerm(ctx, 'inventory.view', orgId, locationId);
+  return ctx.tx`select v.family_item_id, f.name as family_name, v.variety_item_id, i.name as variety_name
+    from inventory.location_varieties v join inventory.items f on f.id = v.family_item_id join inventory.items i on i.id = v.variety_item_id
+    where v.location_id = ${locationId} and f.org_id = ${orgId}`;
 }
 
 export async function setVariety(ctx: Ctx, orgId: string, locationId: string, familyId: string, varietyId: string) {
@@ -283,13 +292,15 @@ export async function createStockRequest(ctx: Ctx, orgId: string, input: { locat
   return { id: r!.id };
 }
 
-export async function listStockRequests(ctx: Ctx, orgId: string, status: string) {
-  requirePerm(ctx, 'inventory.view', orgId);
+export async function listStockRequests(ctx: Ctx, orgId: string, status: string, locationId?: string | null) {
+  if (!['inventory.view', 'inventory.request'].some((p) => ctx.access.can(p as never, orgId))) requirePerm(ctx, 'inventory.view', orgId);
   return ctx.tx`select r.id, r.location_id, l.name as location_name, r.item_id, i.name as item_name, r.note, r.status, r.created_at, r.closed_at,
       coalesce(p.display_name, p.full_name, u.username) as requested_by_name
     from inventory.stock_requests r join core.locations l on l.id = r.location_id left join inventory.items i on i.id = r.item_id
     join core.users u on u.id = r.requested_by left join core.people p on p.id = u.person_id
-    where r.org_id = ${orgId} and (${status} = 'all' or r.status = ${status}) order by r.created_at desc limit 200`;
+    where r.org_id = ${orgId} and (${status} = 'all' or r.status = ${status})
+      and (${locationId ?? null}::uuid is null or r.location_id = ${locationId ?? null})
+    order by r.created_at desc limit 200`;
 }
 
 export async function closeStockRequest(ctx: Ctx, orgId: string, id: string, status: 'done' | 'cancelled') {

@@ -525,8 +525,9 @@ function TrialBalance({ rows }: { rows: TbRow[] }) {
 }
 
 const SOURCE_LABEL: Record<string, string> = {
-  order: 'Sale', order_void: 'Void', refund: 'Refund', expense: 'Expense', purchase: 'Purchase', transfer: 'Transfer', day_open: 'Day open',
-  day_close: 'Day close', capital: 'Capital', wage: 'Wages', supplier_payment: 'Supplier payment', stock: 'Stock', waste: 'Waste',
+  order: 'Sale', order_cogs: 'Food cost of sale', order_void: 'Void', order_cogs_void: 'Void (food cost back)', refund: 'Refund', expense: 'Expense',
+  purchase: 'Purchase', transfer: 'Transfer', float_variance: 'Float difference', close_variance: 'Close difference', capital: 'Capital',
+  wages: 'Wages', commission: 'Commission', supplier_payment: 'Supplier payment', stock_count: 'Stock count', waste: 'Waste',
 };
 
 function Journal({ rows }: { rows: JournalRow[] }) {

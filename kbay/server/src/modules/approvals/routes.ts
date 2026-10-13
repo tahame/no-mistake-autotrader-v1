@@ -12,6 +12,9 @@ export async function approvalsRoutes(base: FastifyInstance) {
     schema: { tags: ['approvals'], params: orgParams, querystring: z.object({ status: z.enum(['pending', 'approved', 'rejected', 'cancelled', 'all']).default('pending') }) },
   }, (req) => run(req, (ctx) => svc.list(ctx, req.params.orgId, req.query.status)));
 
+  app.get('/orgs/:orgId/approvals/:id', { schema: { tags: ['approvals'], params: orgIdParams } }, (req) =>
+    run(req, (ctx) => svc.get(ctx, req.params.id)));
+
   app.post('/orgs/:orgId/approvals/:id/decide', {
     schema: { tags: ['approvals'], params: orgIdParams, body: z.object({ decision: z.enum(['approve', 'reject']), note: z.string().max(1000).optional() }) },
   }, (req) => run(req, (ctx) => svc.decide(ctx, req.params.id, req.body.decision, req.body.note)));

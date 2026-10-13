@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { run } from '../../http/run.js';
 import { id, orgIdParams, orgParams, qty, typed } from '../../http/schemas.js';
+import { openDayFor } from '../finance/index.js';
 import * as svc from './service.js';
 
 export async function inventoryRoutes(base: FastifyInstance) {
@@ -21,6 +22,9 @@ export async function inventoryRoutes(base: FastifyInstance) {
   app.put('/orgs/:orgId/stock-items/:id/mix', {
     schema: { tags: ['inventory'], params: orgIdParams, body: z.object({ components: z.array(z.object({ itemId: id, qty, unit: z.string() })) }) },
   }, (req) => run(req, (ctx) => svc.setMixComponents(ctx, req.params.orgId, req.params.id, req.body.components), opts));
+
+  app.get('/orgs/:orgId/varieties', { schema: { tags: ['inventory'], params: orgParams, querystring: z.object({ locationId: id }) } }, (req) =>
+    run(req, (ctx) => svc.listVarieties(ctx, req.params.orgId, req.query.locationId), opts));
 
   app.post('/orgs/:orgId/varieties', {
     schema: { tags: ['inventory'], params: orgParams, body: z.object({ locationId: id, familyId: id, varietyId: id }) },
@@ -47,11 +51,15 @@ export async function inventoryRoutes(base: FastifyInstance) {
   app.post('/orgs/:orgId/waste', {
     schema: { tags: ['inventory'], params: orgParams, body: z.object({ locationId: id, itemId: id, qty, unit: z.string(),
       wasteClass: z.enum(['food', 'beverage', 'other']), reason: z.string().min(2).max(300), businessDayId: id.nullable().optional() }) },
-  }, (req) => run(req, (ctx) => svc.recordWaste(ctx, req.params.orgId, { ...req.body, businessDayId: req.body.businessDayId ?? null }), opts));
+  }, (req) => run(req, async (ctx) => {
+    // Waste joins the open day at that location, like expenses and purchases do.
+    const dayId = req.body.businessDayId ?? (await openDayFor(ctx.tx, req.body.locationId))?.id ?? null;
+    return svc.recordWaste(ctx, req.params.orgId, { ...req.body, businessDayId: dayId });
+  }, opts));
 
   app.get('/orgs/:orgId/stock-requests', {
-    schema: { tags: ['inventory'], params: orgParams, querystring: z.object({ status: z.enum(['open', 'done', 'cancelled', 'all']).default('open') }) },
-  }, (req) => run(req, (ctx) => svc.listStockRequests(ctx, req.params.orgId, req.query.status), opts));
+    schema: { tags: ['inventory'], params: orgParams, querystring: z.object({ status: z.enum(['open', 'done', 'cancelled', 'all']).default('open'), locationId: id.optional() }) },
+  }, (req) => run(req, (ctx) => svc.listStockRequests(ctx, req.params.orgId, req.query.status, req.query.locationId), opts));
 
   app.post('/orgs/:orgId/stock-requests', {
     schema: { tags: ['inventory'], params: orgParams, body: z.object({ locationId: id, itemId: id.nullable().optional(), note: z.string().min(2).max(500) }) },
