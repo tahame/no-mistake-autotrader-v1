@@ -167,8 +167,8 @@ export async function financeRoutes(base: FastifyInstance) {
       mentorship: z.boolean(), effectiveFrom: date }) },
   }, (req) => run(req, (ctx) => partners.setInvestorTerms(ctx, req.params.orgId, req.body)));
 
-  app.get('/orgs/:orgId/partners/statement', { schema: { tags: ['partners'], params: orgParams, querystring: z.object({ from: date, to: date }) } }, (req) =>
-    run(req, (ctx) => partners.partnerStatement(ctx, req.params.orgId, req.query.from, req.query.to)));
+  app.get('/orgs/:orgId/partners/statement', { schema: { tags: ['partners'], params: orgParams, querystring: z.object({ from: date, to: date, personId: id.optional() }) } }, (req) =>
+    run(req, (ctx) => partners.partnerStatement(ctx, req.params.orgId, req.query.from, req.query.to, req.query.personId)));
 
   // ---- Employees and wages ----
   app.get('/orgs/:orgId/employees', { schema: { tags: ['payroll'], params: orgParams } }, (req) =>

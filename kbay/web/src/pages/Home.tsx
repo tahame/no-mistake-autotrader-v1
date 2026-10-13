@@ -151,7 +151,7 @@ function LowStockTile() {
           {low.slice(0, 6).map((s) => (
             <li key={s.id} className="flex items-center justify-between gap-3 py-2">
               <span className="min-w-0 truncate font-medium">{s.name}</span>
-              <Badge tone="bad">{qtyDisplay(s.qty_display, s.purchase_unit)} left</Badge>
+              <Badge tone="bad">{qtyDisplay(s.qty_display, s.purchase_unit === 'unit' ? undefined : s.purchase_unit)} left</Badge>
             </li>
           ))}
           {low.length > 6 && <li className="pt-2 text-sm text-[var(--muted)]">and {low.length - 6} more</li>}

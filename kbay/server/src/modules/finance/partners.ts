@@ -151,8 +151,10 @@ export async function earnedByPerson(tx: Tx, orgId: string, from: string | null,
  * Partner statement: earned (share of profit), withdrawn, reinvested for the period, and how much
  * of each person's profit is still in the business (retained, all time).
  */
-export async function partnerStatement(ctx: Ctx, orgId: string, from: string, to: string) {
-  requirePerm(ctx, 'reports.partners', orgId);
+export async function partnerStatement(ctx: Ctx, orgId: string, from: string, to: string, onlyPersonId?: string | null) {
+  // Anyone may see their own line; seeing everyone's needs reports.partners.
+  const ownOnly = Boolean(onlyPersonId && onlyPersonId === ctx.actor.personId);
+  if (!ownOnly) requirePerm(ctx, 'reports.partners', orgId);
   const earnedPeriod = await earnedByPerson(ctx.tx, orgId, from, to);
   const earnedAll = await earnedByPerson(ctx.tx, orgId, null, to);
   const flows = await ctx.tx<{ person_id: string; key: string; period: number; all_time: number }[]>`
@@ -170,7 +172,7 @@ export async function partnerStatement(ctx: Ctx, orgId: string, from: string, to
   for (const c of current) people.add(c.person_id);
   const totalWeight = current.reduce((a, s) => a + Number(s.weight), 0);
   const get = (pid: string, key: string, f: 'period' | 'all_time') => flows.find((x) => x.person_id === pid && x.key === key)?.[f] ?? 0;
-  return [...people].map((pid) => {
+  return [...people].filter((pid) => !onlyPersonId || pid === onlyPersonId).map((pid) => {
     const share = current.find((c) => c.person_id === pid);
     const withdrawnAll = get(pid, 'drawings', 'all_time');
     const reinvestedAll = get(pid, 'reinvested', 'all_time');

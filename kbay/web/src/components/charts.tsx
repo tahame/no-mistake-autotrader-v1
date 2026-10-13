@@ -301,7 +301,9 @@ export function BarList({ title, rows, series, format = rs }: {
       <div ref={ref} className="space-y-3">
         {rows.map((r) => (
           <div key={r.key} className="rounded-lg px-1 py-0.5 hover:bg-[var(--panel-2)]">
-            <div className="flex items-baseline justify-between gap-3 text-sm">
+            <div className={series.length > 1
+              ? 'flex flex-col gap-0.5 text-sm sm:flex-row sm:items-baseline sm:justify-between sm:gap-3'
+              : 'flex items-baseline justify-between gap-3 text-sm'}>
               <span className="min-w-0 truncate">{r.label}</span>
               <span className="shrink-0 tabular text-[var(--ink)]">
                 {r.values.map((v, i) => (

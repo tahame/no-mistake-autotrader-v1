@@ -131,6 +131,7 @@ export async function labour(ctx: Ctx, orgId: string, r: Range) {
     from finance.journal_lines l join finance.journal_entries e on e.id = l.entry_id
     join finance.ledger_accounts la on la.id = l.ledger_account_id join core.people p on p.id = l.person_id
     where e.org_id = ${orgId} and la.system_key in ('wages', 'commission') and e.entry_date between ${r.from} and ${r.to}
+      and (${r.locationId ?? null}::uuid is null or coalesce(l.location_id, e.location_id) = ${r.locationId ?? null})
     group by p.id, name order by name`;
 }
 

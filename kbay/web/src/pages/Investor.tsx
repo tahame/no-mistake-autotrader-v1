@@ -180,14 +180,12 @@ function ReturnCard({ personId }: { personId: string }) {
   const from = monthStart();
   const to = todayPk();
   const allowed = can('reports.partners');
-  const stmt = useQuery({ queryKey: ['partner-statement', orgId, from, to], enabled: allowed,
-    queryFn: () => get<StatementRow[]>(`/orgs/${orgId}/partners/statement${qs({ from, to })}`) });
+  // Your own line only; the server allows it without partner-report rights.
+  const stmt = useQuery({ queryKey: ['partner-statement', orgId, from, to, personId],
+    queryFn: () => get<StatementRow[]>(`/orgs/${orgId}/partners/statement${qs({ from, to, personId })}`) });
   const partners = useQuery({ queryKey: ['partners', orgId], enabled: allowed, queryFn: () => get<Partners>(`/orgs/${orgId}/partners`) });
 
-  if (!allowed) {
-    return <Card title="Your return"><p className="text-sm text-[var(--muted)]">Ask a partner for your return statement.</p></Card>;
-  }
-  if (stmt.isLoading || partners.isLoading) return <Card title="Your return"><Spinner /></Card>;
+  if (stmt.isLoading || (allowed && partners.isLoading)) return <Card title="Your return"><Spinner /></Card>;
   if (stmt.error) return <Card title="Your return"><ErrorText error={stmt.error} /></Card>;
 
   const row = stmt.data?.find((r) => r.personId === personId);
