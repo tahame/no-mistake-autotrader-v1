@@ -1,0 +1,25 @@
+# K-BAY site block — add to (or import from) the server's existing Caddyfile.
+# Until a domain is ready, use <server-ip-with-dashes>.sslip.io (e.g. 51-75-12-34.sslip.io):
+# it resolves to the server, so Caddy gets a real HTTPS certificate now. To move to a real
+# domain later, replace the hostname below and reload Caddy — nothing else changes.
+
+{$KBAY_HOST:kbay.example.sslip.io} {
+	encode zstd gzip
+
+	# If Caddy runs in Docker (not on the host), use the app container instead:
+	#   reverse_proxy kbay-app-1:8080   (and attach Caddy to the kbay_edge network)
+	reverse_proxy 127.0.0.1:{$KBAY_PORT:8090}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		-Server
+	}
+	log {
+		output file /var/log/caddy/kbay.access.log {
+			roll_size 20mb
+			roll_keep 5
+		}
+	}
+}

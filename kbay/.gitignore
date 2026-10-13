@@ -3,3 +3,8 @@ dist/
 .env
 *.log
 coverage/
+deploy/.env
+deploy/.seeded
+deploy/seed-output.txt
+deploy/backups/*
+!deploy/backups/.gitkeep
