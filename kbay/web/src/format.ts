@@ -1,4 +1,6 @@
-// Display helpers. Money is stored in paisa; the UI shows rupees.
+// Display helpers. Money is stored in paisa; the UI shows rupees. Times show in business time (Pakistan),
+// whatever timezone the tablet happens to be set to.
+const TZ = 'Asia/Karachi';
 
 export function rs(minor: number | null | undefined, opts: { sign?: boolean } = {}) {
   if (minor === null || minor === undefined) return '—';
@@ -29,12 +31,12 @@ export function qtyDisplay(qty: string | number, unit?: string) {
 export function dateLabel(d: string | Date | null | undefined) {
   if (!d) return '—';
   const dt = typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d) ? new Date(`${d}T12:00:00`) : new Date(d);
-  return dt.toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric' });
+  return dt.toLocaleDateString('en-PK', { day: 'numeric', month: 'short', year: 'numeric', timeZone: TZ });
 }
 
 export function timeLabel(d: string | Date | null | undefined) {
   if (!d) return '—';
-  return new Date(d).toLocaleString('en-PK', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' });
+  return new Date(d).toLocaleString('en-PK', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit', timeZone: TZ });
 }
 
 /** Today's date in Pakistan time, YYYY-MM-DD. */

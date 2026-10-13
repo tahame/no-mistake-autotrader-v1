@@ -70,7 +70,8 @@ export function ChangePassword({ first }: { first?: boolean }) {
     try {
       await post('/auth/password', { current, next });
       setDone(true);
-      await qc.invalidateQueries();
+      // On first sign-in, keep this screen up to show the install guide; Continue reloads the app.
+      if (!first) await qc.invalidateQueries();
     } catch (err) {
       setError(err);
     } finally {

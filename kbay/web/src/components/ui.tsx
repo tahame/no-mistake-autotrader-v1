@@ -59,12 +59,15 @@ export function PageHeader({ title, sub, actions }: { title: string; sub?: React
 }
 
 export function Field({ label, hint, children, className }: { label: string; hint?: ReactNode; children: ReactNode; className?: string }) {
+  // The hint sits outside the <label> so the field's accessible name is just its label.
   return (
-    <label className={cx('block', className)}>
-      <span className="mb-1 block text-sm font-medium">{label}</span>
-      {children}
+    <div className={cx('block', className)}>
+      <label className="block">
+        <span className="mb-1 block text-sm font-medium">{label}</span>
+        {children}
+      </label>
       {hint ? <span className="mt-1 block text-xs text-[var(--muted)]">{hint}</span> : null}
-    </label>
+    </div>
   );
 }
 

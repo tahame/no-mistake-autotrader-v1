@@ -215,7 +215,8 @@ function ItemPicker({ item, onClose, onAdd }: { item: Item; onClose: () => void;
               <button key={v.id} onClick={() => setVariant(v)}
                 className={cx('min-h-16 rounded-xl border px-3 py-2 text-left', variant?.id === v.id ? 'border-brand bg-brand/20' : 'border-[var(--line)] bg-[var(--panel-2)]')}>
                 <div className="font-semibold">{v.name}</div>
-                <div className="text-sm text-[var(--muted)]">{v.open_price ? 'Custom amount' : `${rs(v.price_minor)}${v.size_tag && v.size_tag !== v.name ? ` · ${v.size_tag}` : ''}`}</div>
+                <div className="text-sm text-[var(--muted)]">{v.open_price ? 'Type the amount'
+                  : v.name === rs(v.price_minor) ? (v.size_tag ?? '\u00a0') : `${rs(v.price_minor)}${v.size_tag && v.size_tag !== v.name ? ` · ${v.size_tag}` : ''}`}</div>
               </button>
             ))}
           </div>

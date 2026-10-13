@@ -40,8 +40,12 @@ if ! docker compose ps --status running app 2>/dev/null | grep -q app; then
   fi
 fi
 
-say "Building the K-BAY image"
-docker compose build app
+if [ "${SKIP_BUILD:-}" = 1 ]; then
+  say "Using the existing kbay-app image (SKIP_BUILD=1)"
+else
+  say "Building the K-BAY image"
+  docker compose build app
+fi
 
 if [ -z "${VAPID_PUBLIC_KEY:-}" ]; then
   say "Generating web-push keys"
